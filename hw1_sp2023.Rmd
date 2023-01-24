@@ -107,6 +107,7 @@ survey <- read.csv(file = 'Survey_results_final.csv', stringsAsFactors = FALSE)
 cleaned_data <- survey %>%
   select(Answer.Age, Answer.Gender, Answer.Education, Answer.HouseHoldIncome, Answer.Sirius.Radio, Answer.Wharton.Radio, WorkTimeInSeconds) %>%
   rename(age = Answer.Age, gender = Answer.Gender, education = Answer.Education, income = Answer.HouseHoldIncome, sirius = Answer.Sirius.Radio, wharton = Answer.Wharton.Radio, worktime = WorkTimeInSeconds) %>%
+  filter(age!="", gender!="", education!="", income!="",sirius!="",wharton!="",worktime!="") %>%
   drop_na()
 
 
@@ -142,6 +143,7 @@ p2
 
 p3 <- ggplot(cleaned_data) +
   geom_bar(aes(x = education)) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
   labs( title = "Bar Chart of Education Level", x = "Education" , y = "Frequency")
 
 p3
@@ -240,13 +242,13 @@ a). Read the data into R.
 
 ```{r Final Estimate}
 
-womenData <- read_excel("WomenData_06_16.xlsx")
-womenData
+genderData <- read_excel("WomenData_06_16.xlsx")
+genderData
 ```
 b). Clean the names of each variables. (Change variable names to  `Field`,`Degree`, `Sex`, `Year` and `Number` )
 
 ```{r Clean Names}
-womenData <- womenData %>%
+genderData <- genderData %>%
   rename(Field = `Field and sex`, Number = `Degrees Awarded`)
 
 ```
@@ -254,7 +256,7 @@ c). Set the variable natures properly.
 
 ```{r Set Variable Natures}
 
-womenData$Number = as.numeric(as.character(womenData$Number))
+genderData$Number = as.numeric(as.character(genderData$Number))
 
 ```
 
@@ -264,7 +266,7 @@ No missing values
 
 ```{r 2d}
 
-summary(womenData)
+summary(genderData)
 
 ```
 
@@ -280,7 +282,7 @@ b). What are the degree types?
 BS, MS, and PhD
 
 ```{r 2d}
-table(womenData$Degree)
+table(genderData$Sex)
 ```
 
 
@@ -294,22 +296,119 @@ c). How many year's statistics are being reported here?
 
 Is there evidence that more males are in science-related fields vs `Non-S&E`? Provide summary statistics and a plot which shows the number of people by gender and by field. Write a brief summary to describe your findings.
 
+```{r BS degrees in 2015 Plot}
+  
+
+genderData %>% 
+  filter(Year==2015 & Degree =='BS') %>%
+  ggplot(aes(x = Sex, y = Number, fill = Field)) + 
+  geom_bar(position = "stack", stat = "identity")
+
+```
+
+```{r BS degrees in 2015 Total By Gender}
+
+genderData %>% 
+  filter(Year==2015 & Degree =='BS') %>%
+  group_by(Sex) %>%
+  summarize(total_people = sum(Number))
+
+
+```
+
+Yes, there seems to be a much larger proportion of Females that are in Non-S&E than Males in Non-S&E based on the plot. There are 772,768 Females in Non-S&E fields in 2015 who have a Bachelor's degree from the total of 1,095,703 Females. For Males, there are 493,304 in Non-S&E out of the total of 820,426 Males.
+
+
+
 ## EDA bringing type of degree, field and gender in 2015
 
 Describe the number of people by type of degree, field, and gender. Do you see any evidence of gender effects over different types of degrees? Again, provide graphs to summarize your findings.
 
+```{r Number of people by type of degree, field, gender in 2015 Plot} 
+
+ggplot(genderData, aes(x = Degree, y = Number, fill = Field)) +
+  geom_bar(position = "stack", stat = "identity") +
+  xlab("Group") +
+  ylab("Value") +
+  facet_wrap(~ Sex)
+```
+Based on the graph, it seems that the largest disparity is among Masters students where a higher proportion of females are in non Science-related fields compared to Men with Masters Degrees. This disparity is less pronounced among BS individuals however there still seems to be a slightly higher proportion of females in non Science-related fields compared to Men. For PhD, the distributions seems to be quite similar. The exact numbers by type of degree, field, and gender are as following: 
+
+```{r Number of people by type of degree, field, gender in 2015}
+
+genderData %>% 
+  filter(Year==2015) %>%
+  group_by(Degree, Field, Sex) %>%
+  summarize(total_people = sum(Number))
+
+```
+
 ## EDA bring all variables 
 
-In this last portion of the EDA, we ask you to provide evidence numerically and graphically: Do the number of  degrees change by gender, field, and time? 
+In this last portion of the EDA, we ask you to provide evidence numerically and graphically: Do the number of  degrees change by gender, field, and time?
+
+```{r Number of Degrees by Field & Gender Over Time}
+fieldsOverTime <- genderData %>%
+  group_by(Year, Field, Sex) %>%
+  summarize(total_people = sum(Number)) %>%
+  arrange(Field, Year)
+  
+fieldsOverTime
+
+```
+
+```{r Number of Male Degrees by Field Over Time}
+
+MaleOverTime <- fieldsOverTime %>%
+  filter(Sex == 'Male')
+ggplot(MaleOverTime, aes(x = Year, y = total_people)) +
+  geom_line(aes(color = Field)) +
+  xlab("Year") +
+  ylab("Number of Degrees") +
+  ggtitle("Number of Male College Degrees by Field over Time")
+
+```
+
+```{r Number of Female Degrees By Field Over Time}
+
+FemaleOverTime <- fieldsOverTime %>%
+  filter(Sex == 'Female')
+ggplot(FemaleOverTime, aes(x = Year, y = total_people)) +
+  geom_line(aes(color = Field)) +
+  xlab("Year") +
+  ylab("Number of Degrees") +
+  ggtitle("Number of Female College Degrees by Field over Time")
+
+```
+Based on the plots and the table we can see that over time the number of Non-S&E degrees has been growing for both Males and Females but more sharply for Females. In addition, in recent years it seems as though the number of Science-related degrees for Females has plateaud while Male science related degrees are growing. The data table above displays the numerical values that illustrate this point.
+
 
 ## Women in Data Science
 
 Finally, is there evidence showing that women are underrepresented in data science? Data science is an interdisciplinary field of computer science, math, and statistics. You may include year and/or degree.
 
+```{r Women in Data Science}
+dataScienceData <- genderData %>%
+  filter(Field == "Computer sciences" | Field == "Mathematics and statistics") %>%
+  group_by(Sex, Degree) %>%
+  summarize(total_people = sum(Number))
+dataScienceData %>%
+  ggplot(aes(x = Degree, y = total_people, fill = Sex)) + 
+  geom_bar(position = "stack", stat = "identity") + 
+  xlab("Degree Type") +
+  ylab("Number of Degrees") +
+  ggtitle("Data Science Representation By Gender")
+
+```
+
+Based on the above graph, we see that in the majors most related to data science there is an overrepresentation of males
+in these majors across all degrees. Based on this, we may conclude that there is an underrepresentation of females in the data science major. 
+
 ## Final brief report
 
 Summarize your findings focusing on answering the questions regarding if we see consistent patterns that more males pursue science-related fields. Any concerns with the data set? How could we improve on the study?
 
+Based on our findings, it seems that females are underrepresented in science-related fields and a smaller proportion of females are in those fields compared to men. Our stacked bar chart earlier on from 2015 displayed this insight as Non-S&E made up a much larger portion for female graduates than it did for men. Moreover, analyzing the evolution of the number of degrees in different fields for Males and Females over time showed that the number of males in Science related degrees is growing more consistently than it is for Females. Some concerns for the data set include that it only includes data from the US. An analysis of this same question for a worldwide data set may yield different results. Moreover, the data only goes up to 2016 so more recent years might show us different insights. This study could also be improved by looking at the job positions of these degree holders. We may find a disparity between Males and Females with regards to where they fall within the corporate ladder.
 ## Appendix
 
 To help out, we have included some R-codes here as references. You should make your own chunks filled with texts going through each items listed above. Make sure to hide the unnecessary outputs/code etc. 
