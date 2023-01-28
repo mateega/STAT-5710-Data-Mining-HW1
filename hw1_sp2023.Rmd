@@ -538,6 +538,12 @@ Here are the datasets:
 
 Feel free to use either dataset to address the problems. 
 
+```{r}
+mldata1 <- read.csv("data/MLPayData_Total.csv", header=T, stringsAsFactors = FALSE)
+mldata2 <- read.csv("data/baseball.csv", header=T, stringsAsFactors = FALSE)
+
+```
+
 ## EDA: Relationship between payroll changes and performance
 
 Payroll may relate to performance among ML Baseball teams. One possible argument is that what affects this year's performance is not this year's payroll, but the amount that payroll increased from last year. Let us look into this through EDA. 
@@ -551,30 +557,110 @@ a). To describe the increment of payroll in each year there are several possible
 
 Explain why the log difference is more appropriate in this setup.
 
+
+If we convert data to its log space, we turn relative changes into absolute changes. Since we are dealing with relative ("incremental") changes we want to log our data. This means we can better compare data that have different absolute values. Hence an increase in pay from 100,000 USD to 110,000 USD and an increase in pay from 1,000,000 USD to 1,100,000 USD will appear the same, which is what we want. 
+
+
 b). Create a new variable `diff_log=log(payroll_2013) - log(payroll_2012)`. Hint: use `dplyr::lag()` function.
 
+```{r Create New Variable, echo=FALSE, warning=FALSE }
+diff_log <- log(mldata1$p2013)-log(mldata1$p2012)
+diff_log
+```
+
 c). Create a long data table including: team, year, diff_log, win_pct
+
+```{r Create a Long Data Table}
+mldata3 <- mldata2
+mldata3 = select(mldata3, -win_num)
+mldata3$diff_log <- log(mldata3$payroll) - log(lag(mldata3$payroll))
+mldata3$diff_log[mldata3$year==1998] <- NA
+mldata3 = select(mldata3, -payroll)
+```
 
 
 ## Exploratory questions
 
 a). Which five teams had highest increase in their payroll between years 2010 and 2014, inclusive?
 
+```{r Payroll Increase }
+teams <- mldata3[!duplicated(mldata3$team),1] # each team
+
+mldataHighestPay <- data.frame(matrix(ncol = 2, nrow = 0)) # create a new table
+colnames(mldataHighestPay) <- c('team', 'pay') # add team and pay
+mldataHighestPay$team <- as.character(mldataHighestPay$team)
+mldataHighestPay$pay <- as.numeric(mldataHighestPay$pay)
+
+for (i in 1:length(teams)) {
+  mldataHighestPay <- mldataHighestPay%>%
+    add_row(
+      team = teams[i],
+      pay = with(mldata3,sum(diff_log[(year>=2010 & year<=2014) & (team==teams[i])])) #sum the pay increase in years 2010-2014
+    )
+}
+top5teams <- mldataHighestPay[order(mldataHighestPay$pay,decreasing=TRUE),]
+top5teams[1:5,]
+```
+
+The teams with the greatest pay increase (via log difference) were 1) Los Angeles Dodgers, 2) Washington Nationals, 3) San Diego Padres, 4) Texas Rangers, and 5) San Francisco Giants
+
 b). Between 2010 and 2014, inclusive, which team(s) "improved" the most? That is, had the biggest percentage gain in wins?
+
+```{r Payroll Increase }
+teams <- mldata3[!duplicated(mldata3$team),1] # each team
+
+mldataMostImproved <- data.frame(matrix(ncol = 2, nrow = 0)) # create a new table
+colnames(mldataMostImproved) <- c('team', 'win_improv') # add team and pay
+mldataMostImproved$team <- as.character(mldataMostImproved$team)
+mldataMostImproved$win_improv <- as.numeric(mldataMostImproved$win_improv)
+
+for (i in 1:length(teams)) {
+  mldataMostImproved <- mldataMostImproved %>%
+    add_row(
+      team = teams[i],
+      win_improv = with(mldata3,sum(win_pct[(year==2014) & (team==teams[i])])) - with(mldata3,sum(win_pct[(year==2010) & (team==teams[i])])) #sum the pay increase in years 2010-2014
+    )
+}
+top5teams <- mldataMostImproved[order(mldataMostImproved$win_improv,decreasing=TRUE),]
+top5teams[1:5,]
+```
+
+The teams that improved the most (had the biggest difference in percentage of wins) from 2010 to 2014 were 1) Pittsburgh Pirates, 2) Baltimore Orioles, 3) Washington Nationals, 4) Seattle Mariners, and 5) 	Kansas City Royals
 
 
 ## Do log increases in payroll imply better performance? 
 
 Is there evidence to support the hypothesis that higher increases in payroll on the log scale lead to increased performance?
 
+```{r} 
+mldataHighestPay$win_improv = mldataMostImproved$win_improv
+g <- ggplot(mldataHighestPay, aes(pay, win_improv))
+g + geom_point() + labs(title="Log Pay Incr. vs Percentange Win Incr.", x="Log Pay Incr.", y="Percentange Win Incr.") + geom_smooth(method = "lm", formula = y ~ x, se = F,color = "red") 
+
+cor(mldataHighestPay$win_improv, mldataHighestPay$pay)
+```
+
 Pick up a few statistics, accompanied with some data visualization, to support your answer. 
+
+There isn't evidence that supports that a significant payroll increase (on the log scale) leads to a increased performance. Plotting Log Pay Incr. vs Percentange Win Incr. we see that the data points are very scattered and don't follow an apparent trend. Looking at a line of best fit we see that there is a slight increase in slope, but with huge variance. 
+
+The correlation between Log Pay Incr. and Percentange Win Incr. is 0.0939, which is very low
+
+Only one team (Washington Nationals) is in the list of both highest increase in payroll and highest increase in performance, which also implies minimal correlation.
+
 
 ## Comparison
 
 Which set of factors are better explaining performance? Yearly payroll or yearly increase in payroll? What criterion is being used? 
 
+Yearly payroll is better as explaining performance. If we chart payroll vs win_pct and control for year, we see a clear positive relationship between payroll and win_pct, meaning the more a team is paid, the better we expect them to perform.
 
-
-
-
-
+```{r}
+mldata2 %>%
+  ggplot(aes(x=payroll, y=win_pct, group = year, color=team)) +
+  geom_point()+
+  geom_smooth(method="lm", formula=y~x, se=F,color = "black")+
+  facet_wrap(~year) + 
+  theme_bw() +
+  theme(legend.position = 0)
+```
