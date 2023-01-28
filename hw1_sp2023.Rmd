@@ -368,7 +368,11 @@ Please fill in the google form to list your platform where surveys will be launc
 
 A good proposal will give an accurate estimation with the least amount of money used. 
 
+We can launch a survey to first estimate the number of Sirius Radio, with a question asking "Have you listened to Sirius XM?". If they have listened to Sirius XM, we can then provide a short list of the shows of various popularities of Sirius Radio including the Wharton Business Radio Show and ask which shows the user has listened too, recording their response in the form of chekcboxes on the list of shows. In addition, we will have a few more questions regarding demographic details (age, gender, income level, and education level). We can use this to estimate the proportion, p, of survey respondents who listened to the Wharton Business Radio Show and multiply it by US population (331.9 million). 
 
+For example, if 3% of survey respondents say they listen to Wharton Business Radio Show then we'd estimate that there are 3% * 331.9 million = 9.96 million Wharton Business Radio Show listeners.
+
+The platform we will use to survey our audience is SurveyMonkey Audience -- a platform that allows you to create a survey then send it out to your desired target audience. SurveyMonkey handles the respondent sourcing, which leads to us, the surveyor, paying a fee. Using SurveyMonkey’s “General Population”, we will survey a sample from the US, all genders, all ages, and all income levels. For $975, we will get 650 survey responses. SurveyMonkey projects us to receive our responses within 24 hours, which is significantly quicker than the 2 month time restriction. 
 
 # Case study 2: Women in Science
 
